@@ -1,34 +1,90 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Multitemas 
 
-## Getting Started
+Precisamos adicionar ao template um tema próprio, como foi feito no arquivo `src/components/templates/header.tsx`  
+```tsx
+<ThemeProvider
+      theme={(theme) =>headerTheme(theme, mode)}
+    >
+```  
+Também precisamos criar um arquivo de tema especifico para lidar com os novos temas `src/components/templates/theme.tsx`  
+A estrutra desses temas de templates, foram pensados para dar suporte ao tema global que é tokenizado de acordo com o system design, recebendo o tema global e repassando para o tema do template;  
 
-First, run the development server:
+### Criando os temas
+Os temas customizados devem seguir uma estrutura diferente de composição, para que os atomos, moleculas e organismos possam consumir os temas sem precisarem qual estilo está sendo aplicado
 
-```bash
-npm run dev
-# or
-yarn dev
-```
+```tsx
+const coffe = (theme: any) =>
+  createTheme({
+    ...theme,
+    button: {
+      primay: {
+        color: "#007789",
+        borderColor: "#225511",
+      },
+      color: "#eee",
+      borderColor: "#228855",
+    },
+    headerContainer: {
+      backgroundColor: theme.darkSecundaryColor,
+    },
+  } as any);
+  ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Ajustando os styled components
+`src/components/atoms/button/button.style.tsx` 
+Os styleds components devem ser ajustados para lidarem com o systema de multitemas, para isso devemos:  
+```tsx
+ `
+  background-color: ${
+    props.theme.button?.backgroundColor || props.theme.neutralPrimaryColor
+  };
+    borderColor: ${
+      props.theme.button?.borderColor || props.theme.darkPrimaryColor
+    };
+`
+  ```
+Os estilos passam a receber dois temas, damos prioridade para validar o tema customizado antes de acessar o tema global, outro ponto importante é a construção dos nomes, que devem representar o component e não a tokenização, por exemplo:
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+Um componente de tipografia chamado TEXTO deve ter em seu estilo a seguinte convenção:
+```tsx
+ `
+  background-color: ${
+    props.theme.texto?.backgroundColor || props.theme.neutralPrimaryColor
+  };
+`
+  ```
+Convenção: props.theme{nomeDoComponente}{propriedadeDoCSS} --- usar --- lowerCamelCase
 
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+### Lidando com variantes
+Mesmo com o multitemas instalado e pronto, ainda devemos lidar com as variantes de cada component, para isso utilizei uma prop nova chamada "variante" como no exemplo dos botões no header `src/components/templates/header.tsx`  
+Mas para as variantes funcionarem com o novo sistema de multitemas, foi desenvolvido uma util que deve ser usado.
+```tsx
+const Button = styled(Buttom)((props: any) => {
+  setStyleVariants("button", props); // devemos chamar a util indicando qual componente estamos validando a variação
+  return `
+  background-color: ${
+    props.theme.button?.backgroundColor || props.theme.neutralPrimaryColor
+  };
+    borderColor: ${
+      props.theme.button?.borderColor || props.theme.darkPrimaryColor
+    };
+`;
+})
+  ```
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
+  A util esta no arquivo `src/styles/utils/setStyleVariants.ts`  e basicamente ela valida a variação do componente pela props "variante" e repassa ao tema.
 
-## Learn More
+  ```tsx
+const setStyleVariants = (component: string, props: any) => {
+  if (props.theme?.[component]?.[props.variante]) {
+    props.theme[component] = props.theme[component][props.variante];
+  }
+};
+  ```
 
-To learn more about Next.js, take a look at the following resources:
+  O uso de variante ainda está em desenvolvimento, precisamos validar os cenarios a seguir, para estar pronto:
+  * Quando meu componente tem atributos do css gerais indiferentes da variante
+  * Uso das variantes para temas globais.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+  
